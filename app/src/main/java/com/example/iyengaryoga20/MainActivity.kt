@@ -60,10 +60,10 @@ class MainActivity : ComponentActivity() {
 
             IyengarYoga20Theme(appTheme = currentTheme) {
 
-                // 1. Логика уведомлений (вот функция, которая потерялась)
+
                 NotificationHandler()
 
-                // 2. Логика авторизации
+
                 val authViewModel: AuthViewModel = viewModel()
                 val authState by authViewModel.authState.collectAsState()
 
@@ -85,7 +85,7 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     is AuthState.LoggedIn -> {
-                        // Если вошли - показываем приложение
+
                         MainApp(currentUser = state.user, onLogout = { authViewModel.logout() })
                     }
                 }
