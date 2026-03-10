@@ -94,13 +94,13 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// --- ВОТ ЭТА ФУНКЦИЯ БЫЛА ПОТЕРЯНА ---
+
 @Composable
 fun NotificationHandler() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Лаунчер для разрешения (Android 13+)
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission(),
         onResult = { isGranted ->
@@ -109,7 +109,7 @@ fun NotificationHandler() {
             }
         }
     )
-
+//Делаю диплом
     LaunchedEffect(Unit) {
         val settingsManager = SettingsManager(context)
         val notificationsEnabled = settingsManager.notificationsEnabled.first()
