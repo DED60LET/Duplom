@@ -33,9 +33,9 @@ import com.example.iyengaryoga20.data.SettingsManager
 import com.example.iyengaryoga20.data.db.UserEntity
 
 import com.example.iyengaryoga20.model.AppTheme
-import com.example.iyengaryoga20.screens.LoginScreen
-import com.example.iyengaryoga20.screens.RegistrationScreen
-import com.example.iyengaryoga20.screens.ScheduleScreen
+
+import com.example.iyengaryoga20.screens.ProfileScreen
+
 import com.example.iyengaryoga20.ui.screens.*
 import com.example.iyengaryoga20.ui.theme.IyengarYoga20Theme
 import com.example.iyengaryoga20.utils.NotificationHelper
@@ -79,8 +79,9 @@ class MainActivity : ComponentActivity() {
                     is AuthState.NeedsRegistration -> {
                         RegistrationScreen(
                             phone = state.phone,
-                            onRegisterClick = { name, email, dob, card ->
-                                authViewModel.onRegistrationComplete(state.phone, name, email, dob, card)
+                            // Убрали card отсюда
+                            onRegisterClick = { name, email, dob ->
+                                authViewModel.onRegistrationComplete(state.phone, name, email, dob)
                             }
                         )
                     }
@@ -158,6 +159,7 @@ fun MainApp(onLogout: () -> Unit, currentUser: UserEntity) { // Сюда фун�
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
+                // ВЕРНУЛИ 4 КНОПКИ (Убрали "О центре")
                 val items = listOf(
                     Triple("news", "Новости", Icons.Default.Article),
                     Triple("schedule", "Расписание", Icons.Default.CalendarToday),
@@ -168,7 +170,7 @@ fun MainApp(onLogout: () -> Unit, currentUser: UserEntity) { // Сюда фун�
                 items.forEach { (route, label, icon) ->
                     NavigationBarItem(
                         icon = { Icon(icon, contentDescription = label) },
-                        label = { Text(label) },
+                        label = { Text(label, maxLines = 1, style = MaterialTheme.typography.labelSmall) },
                         selected = currentRoute == route,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.onPrimary,
@@ -180,9 +182,7 @@ fun MainApp(onLogout: () -> Unit, currentUser: UserEntity) { // Сюда фун�
                         onClick = {
                             if (currentRoute != route) {
                                 navController.navigate(route) {
-                                    popUpTo(navController.graph.startDestinationId) {
-                                        saveState = true
-                                    }
+                                    popUpTo(navController.graph.startDestinationId) { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
@@ -201,14 +201,11 @@ fun MainApp(onLogout: () -> Unit, currentUser: UserEntity) { // Сюда фун�
             composable("news") { NewsScreen() }
             composable("schedule") { ScheduleScreen(viewModel = sharedViewModel) }
             composable("bookings") { BookingsScreen(viewModel = sharedViewModel) }
-            composable("profile") {
-                com.example.iyengaryoga20.ui.screens.ProfileScreen(
-                    navController = navController,
-                    onLogout = onLogout // <--- ПЕРЕДАЕМ ФУНКЦИЮ В ЭКРАН
-                )
-            }
-
+            composable("profile") { ProfileScreen(navController = navController) }
             composable("contacts") { ContactsScreen(navController) }
+
+            // ОБНОВЛЕНИЕ: Передаем navController, чтобы работала кнопка "Назад"
+            composable("about") { AboutScreen(navController = navController) }
         }
     }
 }

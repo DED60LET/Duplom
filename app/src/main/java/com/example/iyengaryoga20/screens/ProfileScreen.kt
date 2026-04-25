@@ -1,5 +1,8 @@
-package com.example.iyengaryoga20.ui.screens
-
+package com.example.iyengaryoga20.screens
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,10 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.iyengaryoga20.model.AppTheme
 import com.example.iyengaryoga20.ui.theme.*
 import com.example.iyengaryoga20.viewmodel.ProfileViewModel
@@ -31,74 +37,95 @@ fun ProfileScreen(
     onLogout: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
 
-    // Подписка на данные из ViewModel
+    val user by viewModel.currentUser.collectAsState()
     val notificationsEnabled by viewModel.areNotificationsEnabled.collectAsState()
     val testNotificationsEnabled by viewModel.areTestNotificationsEnabled.collectAsState()
     val currentTheme by viewModel.currentTheme.collectAsState()
 
-    // Управление диалогами
     var showThemeDialog by remember { mutableStateOf(false) }
     var showNotificationDialog by remember { mutableStateOf(false) }
+
+    // --- МАГИЯ ВЫБОРА КАРТИНКИ ---
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri ->
+            if (uri != null) {
+                // Сохраняем постоянное разрешение на чтение этого файла (чтобы после перезагрузки картинка не пропала)
+                val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(uri, flag)
+
+                // Сохраняем в базу данных
+                viewModel.updateAvatar(uri.toString())
+            }
+        }
+    )
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            // Цвет фона берется из выбранной темы
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(scrollState)
             .padding(16.dp)
     ) {
-        // --- 1. ШАПКА ПРОФИЛЯ ---
-        Text(
-            text = "Профиль",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.ExtraBold,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
+        Text("Профиль", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(bottom = 24.dp))
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // Аватарка
+            // --- АВАТАРКА ---
             Surface(
-                modifier = Modifier.size(80.dp),
+                modifier = Modifier
+                    .size(80.dp)
+                    .clickable {
+                        // При клике открываем галерею фотографий
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                if (user?.avatarUri != null) {
+                    // Если картинка выбрана - рисуем ее через Coil
+                    AsyncImage(
+                        model = user?.avatarUri,
+                        contentDescription = "Аватарка пользователя",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
+                } else {
+                    // Иначе рисуем стандартную иконку
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Person, null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // Имя
             Column {
                 Text(
-                    text = "Иван Иванов",
+                    text = user?.fullName ?: "Загрузка...",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
-                    text = "+7 900 123-45-67",
+                    text = user?.phoneNumber ?: "",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Редактировать",
+                    text = "Изменить фото",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(top = 4.dp).clickable { }
+                    modifier = Modifier.padding(top = 4.dp).clickable {
+                        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }
                 )
             }
         }
@@ -210,14 +237,6 @@ fun ProfileScreen(
 
             Divider(color = MaterialTheme.colorScheme.background, thickness = 1.dp)
 
-            // Кнопка: История
-            ProfileMenuItem(
-                icon = Icons.Default.History,
-                title = "История посещений",
-                onClick = { /* Заглушка */ }
-            )
-
-            Divider(color = MaterialTheme.colorScheme.background, thickness = 1.dp)
 
             // Кнопка: Контакты (Ведет на экран ContactScreen)
             ProfileMenuItem(
@@ -231,7 +250,7 @@ fun ProfileScreen(
 
         // Кнопка выхода
         Button(
-            onClick = onLogout, // <--- 2. ВЫЗЫВАЕМ ФУНКЦИЮ ЗДЕСЬ
+            onClick = { /* Логика выхода */ },
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -240,6 +259,21 @@ fun ProfileScreen(
             Icon(Icons.Default.ExitToApp, contentDescription = null, tint = MaterialTheme.colorScheme.error)
             Spacer(modifier = Modifier.width(8.dp))
             Text("Выйти из аккаунта", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // --- НОВАЯ КНОПКА "О ЦЕНТРЕ" НИЖЕ ВЫХОДА ---
+        Button(
+            onClick = { navController?.navigate("about") }, // Переход на экран О центре
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            contentPadding = PaddingValues(16.dp)
+        ) {
+            Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("О центре йоги Айенгара", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(80.dp))

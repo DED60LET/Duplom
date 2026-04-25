@@ -5,5 +5,6 @@ data class NewsItem(
     val title: String,
     val date: String,
     val description: String,
-    val category: String = "Студия" // Например: "Акция", "Событие", "Студия"
+    val fullText: String,
+    val category: String = "Студия"
 )

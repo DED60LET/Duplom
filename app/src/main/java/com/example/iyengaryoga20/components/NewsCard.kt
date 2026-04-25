@@ -1,5 +1,6 @@
 package com.example.iyengaryoga20.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -8,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -15,13 +17,19 @@ import androidx.compose.ui.unit.sp
 import com.example.iyengaryoga20.model.NewsItem
 
 @Composable
-fun NewsCard(newsItem: NewsItem) {
+fun NewsCard(
+    newsItem: NewsItem,
+    onReadMoreClick: () -> Unit // <-- ПАРАМЕТР КЛИКА
+) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        // ЦВЕТ: Фон из темы
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onReadMoreClick() } // <-- ДЕЛАЕМ ВСЮ КАРТОЧКУ КЛИКАБЕЛЬНОЙ
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Верхняя строка
@@ -31,7 +39,7 @@ fun NewsCard(newsItem: NewsItem) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Surface(
-                    color = MaterialTheme.colorScheme.secondaryContainer, // Акцентный фон
+                    color = MaterialTheme.colorScheme.secondaryContainer,
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
@@ -52,7 +60,6 @@ fun NewsCard(newsItem: NewsItem) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Заголовок
             Text(
                 text = newsItem.title,
                 style = MaterialTheme.typography.titleLarge,
@@ -63,7 +70,6 @@ fun NewsCard(newsItem: NewsItem) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Описание
             Text(
                 text = newsItem.description,
                 style = MaterialTheme.typography.bodyMedium,

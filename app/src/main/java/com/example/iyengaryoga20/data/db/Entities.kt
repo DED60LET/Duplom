@@ -9,7 +9,8 @@ data class UserEntity(
     val fullName: String,
     val email: String,
     val birthDate: String,
-    val cardId: String = ""
+    val cardId: String = "",
+    val avatarUri: String? = null
 )
 
 @Entity(tableName = "bookings")

@@ -18,15 +18,21 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val authState = _authState.asStateFlow()
 
     init {
-        // Проверяем, есть ли сохраненный вход
+        checkSession()
+    }
+
+    private fun checkSession() {
         viewModelScope.launch {
             settings.currentUserPhone.collect { phone ->
                 if (phone.isNullOrEmpty()) {
                     _authState.value = AuthState.LoggedOut
                 } else {
                     val user = db.userDao().getUser(phone)
-                    if (user != null) _authState.value = AuthState.LoggedIn(user)
-                    else _authState.value = AuthState.LoggedOut
+                    if (user != null) {
+                        _authState.value = AuthState.LoggedIn(user)
+                    } else {
+                        _authState.value = AuthState.LoggedOut
+                    }
                 }
             }
         }
@@ -36,23 +42,42 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val user = db.userDao().getUser(phone)
             if (user != null) {
-                settings.loginUser(phone) // Пользователь есть - входим
+                settings.loginUser(phone)
+                _authState.value = AuthState.LoggedIn(user) // Мгновенный переход
             } else {
-                _authState.value = AuthState.NeedsRegistration(phone) // Нет - на регистрацию
+                _authState.value = AuthState.NeedsRegistration(phone)
             }
         }
     }
 
-    fun onRegistrationComplete(phone: String, name: String, email: String, dob: String, card: String) {
+    // Убрали параметр card
+    fun onRegistrationComplete(phone: String, name: String, email: String, dob: String) {
         viewModelScope.launch {
-            val newUser = UserEntity(phone, name, email, dob, card)
+            // В базу передаем пустое значение для поля cardId
+            val newUser = UserEntity(
+                phoneNumber = phone,
+                fullName = name,
+                email = email,
+                birthDate = dob,
+                cardId = ""
+            )
+
+            // 1. Сохраняем в БД
             db.userDao().insertUser(newUser)
+
+            // 2. Сохраняем сессию
             settings.loginUser(phone)
+
+            // 3. МГНОВЕННЫЙ ПЕРЕХОД В ПРИЛОЖЕНИЕ (Без перезапуска)
+            _authState.value = AuthState.LoggedIn(newUser)
         }
     }
 
     fun logout() {
-        viewModelScope.launch { settings.logoutUser() }
+        viewModelScope.launch {
+            settings.logoutUser()
+            _authState.value = AuthState.LoggedOut
+        }
     }
 }
 

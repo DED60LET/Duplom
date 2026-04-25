@@ -1,4 +1,4 @@
-package com.example.iyengaryoga20.screens
+package com.example.iyengaryoga20.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -29,26 +29,21 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleScreen(viewModel: ScheduleViewModel) {
-    // 1. Подписываемся на данные из ViewModel (версия с API и БД)
     val classes by viewModel.uiClasses.collectAsState(initial = emptyList())
     val selectedDate by viewModel.selectedDate.collectAsState()
-    val filters by viewModel.filters.collectAsState() // Здесь лежит selectedHall
+    val filters by viewModel.filters.collectAsState()
 
-    // Списки для фильтров
-    val allTypes = remember { listOf("Начальный", "Терапия", "Основной", "Релакс") }
+    val allTypes = remember { listOf("Начальный", "Терапия", "Основной", "Продвинутый", "Релакс") }
     val allTeachers = remember { listOf("Елена Смирнова", "Игорь Ветров", "Анна Каренина") }
     val allDurations = remember { listOf(45, 60, 90) }
 
-    // Управление шторкой
     var showFilterSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
-
     val dateFormatter = DateTimeFormatter.ofPattern("d MMMM", Locale("ru"))
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            // Цвет фона берем из темы
             .background(MaterialTheme.colorScheme.background)
     ) {
         // --- ШАПКА ---
@@ -61,7 +56,6 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
             ) {
                 Text(text = "Расписание", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground)
 
-                // Кнопка Фильтров
                 FilledTonalIconButton(
                     onClick = { showFilterSheet = true },
                     colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
@@ -71,21 +65,14 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
             }
         }
 
-        // --- ВЫБОР ЗАЛА (Филиала) ---
+        // --- ВЫБОР ЗАЛА ---
         Spacer(modifier = Modifier.height(12.dp))
-        HallSelector(
-            // Используем filters.selectedHall вместо старого selectedClubName
-            selectedHall = filters.selectedHall,
-            onHallSelected = { viewModel.setHall(it) }
-        )
+        HallSelector(selectedHall = filters.selectedHall, onHallSelected = { viewModel.setHall(it) })
 
         Spacer(modifier = Modifier.height(12.dp))
 
         // --- КАЛЕНДАРЬ ---
-        CalendarStrip(
-            selectedDate = selectedDate,
-            onDateSelected = { viewModel.selectDate(it) }
-        )
+        CalendarStrip(selectedDate = selectedDate, onDateSelected = { viewModel.selectDate(it) })
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -99,7 +86,7 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // --- СПИСОК ЗАНЯТИЙ ---
+        // --- СПИСОК НАТИВНЫХ КАРТОЧЕК ---
         LazyColumn(
             contentPadding = PaddingValues(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -108,28 +95,23 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
             if (classes.isEmpty()) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().padding(top = 40.dp), contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "Нет занятий",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
+                        Text("Нет занятий по выбранным фильтрам", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                     }
                 }
             } else {
                 items(classes) { yogaClass ->
                     YogaCardItem(
                         yogaClass = yogaClass,
+                        // Нажатие на кнопку теперь вызывает функцию ViewModel, которая пишет в БД
                         onButtonClick = { viewModel.toggleBooking(yogaClass.id) }
                     )
                 }
             }
-            // Отступ под меню
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 
-    // --- BOTTOM SHEET (Шторка фильтров) ---
+    // --- BOTTOM SHEET (ШТОРКА ФИЛЬТРОВ) ---
     if (showFilterSheet) {
         ModalBottomSheet(
             onDismissRequest = { showFilterSheet = false },
@@ -146,47 +128,23 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 FilterSectionTitle("Тип занятия")
-                FlowRowChipGroup(
-                    items = allTypes,
-                    selectedItems = filters.selectedTypes,
-                    onItemClick = { viewModel.toggleTypeFilter(it) }
-                )
-
+                FlowRowChipGroup(items = allTypes, selectedItems = filters.selectedTypes, onItemClick = { viewModel.toggleTypeFilter(it) })
                 Spacer(modifier = Modifier.height(16.dp))
 
                 FilterSectionTitle("Преподаватель")
-                FlowRowChipGroup(
-                    items = allTeachers,
-                    selectedItems = filters.selectedTeachers,
-                    onItemClick = { viewModel.toggleTeacherFilter(it) }
-                )
-
+                FlowRowChipGroup(items = allTeachers, selectedItems = filters.selectedTeachers, onItemClick = { viewModel.toggleTeacherFilter(it) })
                 Spacer(modifier = Modifier.height(16.dp))
 
                 FilterSectionTitle("Длительность")
-                FlowRowChipGroup(
-                    items = allDurations.map { "$it мин" },
-                    selectedItems = filters.selectedDurations.map { "$it мин" }.toSet(),
-                    onItemClick = { str ->
-                        val duration = str.replace(" мин", "").toInt()
-                        viewModel.toggleDurationFilter(duration)
-                    }
-                )
+                FlowRowChipGroup(items = allDurations.map { "$it мин" }, selectedItems = filters.selectedDurations.map { "$it мин" }.toSet(), onItemClick = { str -> val duration = str.replace(" мин", "").toInt(); viewModel.toggleDurationFilter(duration) })
 
                 Spacer(modifier = Modifier.height(24.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = { viewModel.clearFilters() },
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    OutlinedButton(onClick = { viewModel.clearFilters() }, modifier = Modifier.weight(1f)) {
                         Text("Сбросить", color = MaterialTheme.colorScheme.onSurface)
                     }
-                    Button(
-                        onClick = { showFilterSheet = false },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.weight(1f)
-                    ) {
+                    Button(onClick = { showFilterSheet = false }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary), modifier = Modifier.weight(1f)) {
                         Text("Применить", color = MaterialTheme.colorScheme.onPrimary)
                     }
                 }
@@ -199,25 +157,16 @@ fun ScheduleScreen(viewModel: ScheduleViewModel) {
 // --- ВСПОМОГАТЕЛЬНЫЕ КОМПОНЕНТЫ ---
 
 @Composable
-fun HallSelector(
-    selectedHall: String,
-    onHallSelected: (String) -> Unit
-) {
+fun HallSelector(selectedHall: String, onHallSelected: (String) -> Unit) {
     val halls = listOf("Все залы", "Вайнера", "Антей", "Куйбышева")
-
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(halls) { hall ->
             val isSelected = hall == selectedHall
             Surface(
                 color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(20.dp),
                 border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha=0.3f)),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .clickable { onHallSelected(hall) }
+                modifier = Modifier.clip(RoundedCornerShape(20.dp)).clickable { onHallSelected(hall) }
             ) {
                 Text(
                     text = hall,
@@ -233,26 +182,13 @@ fun HallSelector(
 
 @Composable
 fun FilterSectionTitle(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.padding(bottom = 8.dp)
-    )
+    Text(text = text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.padding(bottom = 8.dp))
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun FlowRowChipGroup(
-    items: List<String>,
-    selectedItems: Set<String>,
-    onItemClick: (String) -> Unit
-) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
+fun FlowRowChipGroup(items: List<String>, selectedItems: Set<String>, onItemClick: (String) -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items.forEach { item ->
             val isSelected = selectedItems.contains(item)
             FilterChip(
