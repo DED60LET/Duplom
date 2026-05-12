@@ -1,4 +1,5 @@
-package com.example.iyengaryoga20.screens
+package com.example.iyengaryoga20.ui.screens
+
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -39,24 +40,23 @@ fun ProfileScreen(
     val scrollState = rememberScrollState()
     val context = LocalContext.current
 
+    // Данные из БД и настроек
     val user by viewModel.currentUser.collectAsState()
     val notificationsEnabled by viewModel.areNotificationsEnabled.collectAsState()
     val testNotificationsEnabled by viewModel.areTestNotificationsEnabled.collectAsState()
     val currentTheme by viewModel.currentTheme.collectAsState()
 
+    // Состояния диалогов
     var showThemeDialog by remember { mutableStateOf(false) }
     var showNotificationDialog by remember { mutableStateOf(false) }
 
-    // --- МАГИЯ ВЫБОРА КАРТИНКИ ---
+    // Лаунчер для выбора аватарки
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
             if (uri != null) {
-                // Сохраняем постоянное разрешение на чтение этого файла (чтобы после перезагрузки картинка не пропала)
                 val flag = Intent.FLAG_GRANT_READ_URI_PERMISSION
                 context.contentResolver.takePersistableUriPermission(uri, flag)
-
-                // Сохраняем в базу данных
                 viewModel.updateAvatar(uri.toString())
             }
         }
@@ -69,35 +69,37 @@ fun ProfileScreen(
             .verticalScroll(scrollState)
             .padding(16.dp)
     ) {
-        Text("Профиль", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.padding(bottom = 24.dp))
+        // --- 1. ШАПКА ПРОФИЛЯ ---
+        Text(
+            text = "Профиль",
+            style = MaterialTheme.typography.headlineLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // --- АВАТАРКА ---
+            // Аватарка
             Surface(
                 modifier = Modifier
                     .size(80.dp)
                     .clickable {
-                        // При клике открываем галерею фотографий
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
+                        photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                     },
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 if (user?.avatarUri != null) {
-                    // Если картинка выбрана - рисуем ее через Coil
                     AsyncImage(
                         model = user?.avatarUri,
-                        contentDescription = "Аватарка пользователя",
+                        contentDescription = "Аватар",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    // Иначе рисуем стандартную иконку
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.Default.Person, null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -106,6 +108,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.width(16.dp))
 
+            // Имя и телефон из БД
             Column {
                 Text(
                     text = user?.fullName ?: "Загрузка...",
@@ -143,7 +146,6 @@ fun ProfileScreen(
 
         Card(
             shape = RoundedCornerShape(20.dp),
-            // Карточка окрашивается в основной цвет темы (Лайм/Лаванда)
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             modifier = Modifier.fillMaxWidth()
@@ -175,7 +177,6 @@ fun ProfileScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Прогресс бар
                 Text(
                     text = "Осталось занятий: 4 из 8",
                     style = MaterialTheme.typography.bodyMedium,
@@ -185,10 +186,7 @@ fun ProfileScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 LinearProgressIndicator(
                     progress = { 0.5f },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(RoundedCornerShape(4.dp)),
+                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                     color = MaterialTheme.colorScheme.onPrimary,
                     trackColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.4f),
                 )
@@ -217,18 +215,16 @@ fun ProfileScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(MaterialTheme.colorScheme.surface) // Фон меню
+                .background(MaterialTheme.colorScheme.surface)
         ) {
-            // Кнопка: Тема
             ProfileMenuItem(
                 icon = Icons.Default.Palette,
-                title = "Тема: ${getThemeName(currentTheme)}",
+                title = "Тема оформления: ${getThemeName(currentTheme)}",
                 onClick = { showThemeDialog = true }
             )
 
             Divider(color = MaterialTheme.colorScheme.background, thickness = 1.dp)
 
-            // Кнопка: Уведомления
             ProfileMenuItem(
                 icon = Icons.Default.Notifications,
                 title = "Настройка уведомлений",
@@ -237,20 +233,34 @@ fun ProfileScreen(
 
             Divider(color = MaterialTheme.colorScheme.background, thickness = 1.dp)
 
+            ProfileMenuItem(
+                icon = Icons.Default.History,
+                title = "История посещений",
+                onClick = {}
+            )
 
-            // Кнопка: Контакты (Ведет на экран ContactScreen)
+            Divider(color = MaterialTheme.colorScheme.background, thickness = 1.dp)
+
             ProfileMenuItem(
                 icon = Icons.Default.Place,
                 title = "Наши центры и контакты",
                 onClick = { navController?.navigate("contacts") }
             )
+
+            Divider(color = MaterialTheme.colorScheme.background, thickness = 1.dp)
+
+            ProfileMenuItem(
+                icon = Icons.Default.Security,
+                title = "Политика конфиденциальности",
+                onClick = { navController?.navigate("privacy") }
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Кнопка выхода
+        // --- 4. КНОПКИ ВЫХОДА И "О ЦЕНТРЕ" ---
         Button(
-            onClick = { /* Логика выхода */ },
+            onClick = onLogout,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surface),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -263,9 +273,8 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // --- НОВАЯ КНОПКА "О ЦЕНТРЕ" НИЖЕ ВЫХОДА ---
         Button(
-            onClick = { navController?.navigate("about") }, // Переход на экран О центре
+            onClick = { navController?.navigate("about") },
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
@@ -279,8 +288,7 @@ fun ProfileScreen(
         Spacer(modifier = Modifier.height(80.dp))
     }
 
-
-    // --- ДИАЛОГ: ВЫБОР ТЕМЫ ---
+    // --- ДИАЛОГИ ---
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
@@ -296,7 +304,6 @@ fun ProfileScreen(
         )
     }
 
-    // --- ДИАЛОГ: НАСТРОЙКА УВЕДОМЛЕНИЙ ---
     if (showNotificationDialog) {
         AlertDialog(
             onDismissRequest = { showNotificationDialog = false },
@@ -321,9 +328,7 @@ fun ProfileScreen(
                     }
                 }
             },
-            confirmButton = {
-                TextButton(onClick = { showNotificationDialog = false }) { Text("Готово") }
-            }
+            confirmButton = { TextButton(onClick = { showNotificationDialog = false }) { Text("Готово") } }
         )
     }
 }
@@ -358,9 +363,7 @@ fun ProfileMenuItem(icon: ImageVector, title: String, onClick: () -> Unit) {
 @Composable
 fun ProfileSwitchItem(icon: ImageVector, title: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -385,10 +388,7 @@ fun ProfileSwitchItem(icon: ImageVector, title: String, checked: Boolean, onChec
 @Composable
 fun ThemeRadioButton(text: String, theme: AppTheme, current: AppTheme, onClick: (AppTheme) -> Unit) {
     Row(
-        Modifier
-            .fillMaxWidth()
-            .selectable(selected = (theme == current), onClick = { onClick(theme) })
-            .padding(vertical = 12.dp),
+        Modifier.fillMaxWidth().selectable(selected = (theme == current), onClick = { onClick(theme) }).padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         RadioButton(selected = (theme == current), onClick = null)

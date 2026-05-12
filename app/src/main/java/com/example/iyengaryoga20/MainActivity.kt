@@ -31,11 +31,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.iyengaryoga20.data.SettingsManager
 import com.example.iyengaryoga20.data.db.UserEntity
-
 import com.example.iyengaryoga20.model.AppTheme
-
-import com.example.iyengaryoga20.screens.ProfileScreen
-
 import com.example.iyengaryoga20.ui.screens.*
 import com.example.iyengaryoga20.ui.theme.IyengarYoga20Theme
 import com.example.iyengaryoga20.utils.NotificationHelper
@@ -201,11 +197,10 @@ fun MainApp(onLogout: () -> Unit, currentUser: UserEntity) { // Сюда фун�
             composable("news") { NewsScreen() }
             composable("schedule") { ScheduleScreen(viewModel = sharedViewModel) }
             composable("bookings") { BookingsScreen(viewModel = sharedViewModel) }
-            composable("profile") { ProfileScreen(navController = navController) }
+            composable("profile") { ProfileScreen(navController = navController, onLogout = onLogout) }
             composable("contacts") { ContactsScreen(navController) }
-
-            // ОБНОВЛЕНИЕ: Передаем navController, чтобы работала кнопка "Назад"
             composable("about") { AboutScreen(navController = navController) }
+            composable("privacy") { PrivacyPolicyScreen(navController = navController) }
         }
     }
 }

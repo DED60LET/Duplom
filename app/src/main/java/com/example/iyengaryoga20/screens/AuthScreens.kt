@@ -65,7 +65,10 @@ fun RegistrationScreen(
 ) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
-    var dob by remember { mutableStateOf("") } // Хранит только цифры, например: "10031995"
+    var dob by remember { mutableStateOf("") }
+
+    // --- НОВОЕ СОСТОЯНИЕ ГАЛОЧКИ ---
+    var isPrivacyAccepted by remember { mutableStateOf(false) }
 
     val textFieldColors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = MaterialTheme.colorScheme.onBackground,
@@ -86,50 +89,41 @@ fun RegistrationScreen(
         Text("Телефон: $phone", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(24.dp))
 
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text("ФИО") },
-            modifier = Modifier.fillMaxWidth(),
-            colors = textFieldColors
-        )
-
+        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("ФИО") }, modifier = Modifier.fillMaxWidth(), colors = textFieldColors)
         Spacer(modifier = Modifier.height(8.dp))
-
-        OutlinedTextField(
-            value = email,
-            onValueChange = { email = it },
-            label = { Text("Email") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-            modifier = Modifier.fillMaxWidth(),
-            colors = textFieldColors
-        )
-
+        OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email), modifier = Modifier.fillMaxWidth(), colors = textFieldColors)
         Spacer(modifier = Modifier.height(8.dp))
+        OutlinedTextField(value = dob, onValueChange = { input ->
+            val digitsOnly = input.filter { it.isDigit() }
+            if (digitsOnly.length <= 8) dob = digitsOnly
+        }, label = { Text("Дата рождения") }, placeholder = { Text("ДД.ММ.ГГГГ") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), visualTransformation = DateVisualTransformation(), modifier = Modifier.fillMaxWidth(), colors = textFieldColors)
 
-        // --- ОБНОВЛЕННОЕ ПОЛЕ С ДАТОЙ РОЖДЕНИЯ ---
-        OutlinedTextField(
-            value = dob,
-            onValueChange = { input ->
-                // Отфильтровываем только цифры и ограничиваем длину 8 символами
-                val digitsOnly = input.filter { it.isDigit() }
-                if (digitsOnly.length <= 8) {
-                    dob = digitsOnly
-                }
-            },
-            label = { Text("Дата рождения") },
-            placeholder = { Text("ДД.ММ.ГГГГ") },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            visualTransformation = DateVisualTransformation(), // Применяем нашу маску
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // --- БЛОК С ГАЛОЧКОЙ ПОЛИТИКИ КОНФИДЕНЦИАЛЬНОСТИ ---
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            colors = textFieldColors
-        )
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(
+                checked = isPrivacyAccepted,
+                onCheckedChange = { isPrivacyAccepted = it },
+                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+            )
+            Text(
+                text = "Я согласен на обработку персональных данных и принимаю Политику конфиденциальности",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         Button(
             onClick = { onRegisterClick(name, email, dob) },
-            enabled = name.isNotBlank() && email.isNotBlank(),
+            // Кнопка активна ТОЛЬКО если заполнены ФИО, Email и стоит галочка!
+            enabled = name.isNotBlank() && email.isNotBlank() && isPrivacyAccepted,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
