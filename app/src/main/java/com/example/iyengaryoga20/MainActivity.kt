@@ -138,11 +138,9 @@ suspend fun tryShowNotification(context: Context) {
         NotificationHelper.showRandomNotification(context)
     }
 }
-// --------------------------------------
-
 
 @Composable
-fun MainApp(onLogout: () -> Unit, currentUser: UserEntity) { // Сюда функция уже приходит из AuthViewModel
+fun MainApp(currentUser: UserEntity, onLogout: () -> Unit) {
     val navController = rememberNavController()
     val sharedViewModel: ScheduleViewModel = viewModel()
 
@@ -155,7 +153,6 @@ fun MainApp(onLogout: () -> Unit, currentUser: UserEntity) { // Сюда фун�
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentRoute = navBackStackEntry?.destination?.route
 
-                // ВЕРНУЛИ 4 КНОПКИ (Убрали "О центре")
                 val items = listOf(
                     Triple("news", "Новости", Icons.Default.Article),
                     Triple("schedule", "Расписание", Icons.Default.CalendarToday),
@@ -163,11 +160,24 @@ fun MainApp(onLogout: () -> Unit, currentUser: UserEntity) { // Сюда фун�
                     Triple("profile", "Профиль", Icons.Default.Person)
                 )
 
+                // --- СПИСОК ЭКРАНОВ ПРОФИЛЯ ---
+                // Указываем панели, какие экраны относятся к вкладке Профиль
+                val profileSubScreens = listOf("profile", "contacts", "about", "privacy", "teachers")
+
                 items.forEach { (route, label, icon) ->
+
+                    // --- ЛОГИКА ПОДСВЕТКИ ---
+                    // Если это кнопка Профиля, подсвечиваем её, если мы на любом из её под-экранов
+                    val isSelected = if (route == "profile") {
+                        currentRoute in profileSubScreens
+                    } else {
+                        currentRoute == route
+                    }
+
                     NavigationBarItem(
                         icon = { Icon(icon, contentDescription = label) },
-                        label = { Text(label, maxLines = 1, style = MaterialTheme.typography.labelSmall) },
-                        selected = currentRoute == route,
+                        label = { Text(label) },
+                        selected = isSelected,
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = MaterialTheme.colorScheme.onPrimary,
                             selectedTextColor = MaterialTheme.colorScheme.onSurface,
@@ -176,7 +186,15 @@ fun MainApp(onLogout: () -> Unit, currentUser: UserEntity) { // Сюда фун�
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         ),
                         onClick = {
-                            if (currentRoute != route) {
+                            // --- МАГИЯ НАВИГАЦИИ ---
+
+                            // 1. Если мы внутри Политики/Контактов и жмем на "Профиль" в нижнем меню
+                            if (route == "profile" && currentRoute in profileSubScreens && currentRoute != "profile") {
+                                // Просто возвращаемся назад в корень профиля
+                                navController.popBackStack("profile", inclusive = false)
+                            }
+                            // 2. Обычное переключение между разными вкладками
+                            else if (currentRoute != route) {
                                 navController.navigate(route) {
                                     popUpTo(navController.graph.startDestinationId) { saveState = true }
                                     launchSingleTop = true
@@ -197,10 +215,16 @@ fun MainApp(onLogout: () -> Unit, currentUser: UserEntity) { // Сюда фун�
             composable("news") { NewsScreen() }
             composable("schedule") { ScheduleScreen(viewModel = sharedViewModel) }
             composable("bookings") { BookingsScreen(viewModel = sharedViewModel) }
-            composable("profile") { ProfileScreen(navController = navController, onLogout = onLogout) }
+            composable("profile") {
+                ProfileScreen(
+                    navController = navController,
+                    onLogout = onLogout
+                )
+            }
             composable("contacts") { ContactsScreen(navController) }
             composable("about") { AboutScreen(navController = navController) }
             composable("privacy") { PrivacyPolicyScreen(navController = navController) }
+            composable("teachers") { TeachersScreen(navController = navController) }
         }
     }
 }

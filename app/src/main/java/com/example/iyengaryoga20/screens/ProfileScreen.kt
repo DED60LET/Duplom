@@ -234,14 +234,6 @@ fun ProfileScreen(
             Divider(color = MaterialTheme.colorScheme.background, thickness = 1.dp)
 
             ProfileMenuItem(
-                icon = Icons.Default.History,
-                title = "История посещений",
-                onClick = {}
-            )
-
-            Divider(color = MaterialTheme.colorScheme.background, thickness = 1.dp)
-
-            ProfileMenuItem(
                 icon = Icons.Default.Place,
                 title = "Наши центры и контакты",
                 onClick = { navController?.navigate("contacts") }
